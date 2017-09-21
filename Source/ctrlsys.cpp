@@ -89,6 +89,9 @@ public:
         ret.stendAddy           = jurikStendAddy_;
         ret.lastErrorSource     = ErrorSource();
         ret.isDeviceNoAnswer    = IsDeviceNoAnswer();
+        ret.hart                = comPortHart_;
+        ret.termoType           = termoType_;
+        ret.modbusPortName      = comPortModbus_.GetPortName();
         return ret;
     }
     DAKSets GetDAKSets() const
@@ -101,15 +104,20 @@ public:
         ret.ispolnenie  = isp_;
         ret.scale       = scale_;
         ret.units       = ret.isCH ? "%НКПР" : "%об.д";
+
         return ret;
     }
     AnsiString FormatTestParam(unsigned nTest, unsigned nPGS, const std::vector<unsigned> &params);
     AnsiString FormatTestParam(unsigned nTest, unsigned nPGS, unsigned param);
-private:
+
     TransferManagerT& tmngr_;
     TiXmlElement *xml_;
     my::RS232::Port comPortModbus_, comPortHeatCham_;
     MasterSlaveIOSettings ioSetsModbus_, ioSetsHeatCham_;
+    AnsiString comPortHart_;
+    AnsiString termoType_;
+
+private:
 
     ModbusAdapter modbus_;
     MasterSlaveIOImpl heatChamIO_;
@@ -154,6 +162,8 @@ void SaveComPortXML(my::RS232::Port &port, const AnsiString& portSekt,
 CtrlSysImpl::Impl::Impl() :
     tmngr_( TransferManager::Instance() ),
     xml_( GetAppXML().config ),
+    comPortHart_(TiXMLAtr::GetStr(xml_, "HART", "COM1" ).c_str()),
+    termoType_(TiXMLAtr::GetStr(xml_, "TERMO_TYPE", "800" ).c_str()),
     comPortModbus_(), ioSetsModbus_(),
     comPortHeatCham_(), ioSetsHeatCham_(),
     modbus_(ioSetsModbus_, &comPortModbus_),
@@ -182,6 +192,8 @@ CtrlSysImpl::Impl::Impl() :
 
     SSET_(COM,              new CommPortNumHlpr( comPortModbus_ ) );
     SSET_(COM_heatcham,     new CommPortNumHlpr( comPortHeatCham_ ) );
+    SSET_(COM_hart,         new MyStrStrValRef( comPortHart_ ) );
+    SSET_(TermoType,         new MyStrStrValRef( termoType_ ) );
 
     SSET_(Timeout,          CreateMyIntStrValRef(ioSetsModbus_.timeOut_) );
     SSET_(WaitDelay,        CreateMyIntStrValRef(ioSetsModbus_.tmWriteDelay_) );
@@ -241,6 +253,10 @@ void CtrlSysImpl::Impl::SaveIni()
     TiXMLAtr::Set( xml_, "газ", gas_ );
     TiXMLAtr::Set( xml_, "версия_ПО", softVer_ );
     TiXMLAtr::Set( xml_, "исполнение", isp_ );
+    TiXMLAtr::Set(xml_, "HART", comPortHart_.c_str());
+    TiXMLAtr::Set(xml_, "TERMO_TYPE", termoType_.c_str());
+
+
 }
 //------------------------------------------------------------------------------
 AnsiString CtrlSysImpl::Impl::ErrorSource()
@@ -401,6 +417,5 @@ void AdjustSensorsEnd()
     ctrlSys.Adjust( DAK::Cmd::Code::adj_s, Pneumo::Conc(Scn::SENS_GAS_IDX) );
 }
 //------------------------------------------------------------------------------
-
 
 

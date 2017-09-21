@@ -42,6 +42,8 @@ typedef boost::shared_ptr<TRichEdit> PRichEdit;
 std::vector<PTabSheet > repTab;
 std::vector<PTabSheet > paspTab;
 std::vector<PTabSheet > chartTab;
+
+std::vector<HartResult> hartResults;
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -152,6 +154,7 @@ void Finalize()
     repTab.clear();
     paspTab.clear();
     chartTab.clear();
+    hartResults.clear();
     //helper.connectOnTransferManagerReport_.reset();
 }
 //------------------------------------------------------------------------------
@@ -282,6 +285,7 @@ void AddDevice(unsigned serial, unsigned addy)
 
     tbs->Caption = serial;  
     chartTab.push_back( PTabSheet(tbs) );
+    hartResults.push_back( HartResult() );
 
 
 }
@@ -289,6 +293,8 @@ void AddDevice(unsigned serial, unsigned addy)
 void DelDevice(unsigned idx)
 {
 	assert(  idx<Count() );
+
+
 
     for( unsigned i=0; i<GRDS_COUNT; ++i )
         my::Grd::DeleteCol( grdDvs[i].first, grdDvs[i].second+idx, 1);
@@ -300,6 +306,9 @@ void DelDevice(unsigned idx)
     repTab.erase( repTab.begin()+idx );
     paspTab.erase( paspTab.begin()+idx );
     chartTab.erase( chartTab.begin()+idx );
+    hartResults.erase(hartResults.begin() + idx);
+
+
 
 }
 //------------------------------------------------------------------------------
@@ -332,11 +341,17 @@ void SaveFile(const AnsiString& fn)
     {
     	TiXmlElement
         	*eDev = TiXML::CreateChild( mainElem, "ְִÊ"),
-            *eKoefs = TiXML::CreateChild(eDev, "ך‎פû")
+            *eKoefs = TiXML::CreateChild(eDev, "ך‎פû") 
         ;
         TiXMLAtr::Set( eDev, "אהנוס", addys[iDev] );
         TiXMLAtr::Set( eDev, "סונטיםûי", serials[iDev] );
         TiXMLAtr::Set( eDev, "ֲûבנאם", lvDevs->Items->Item[iDev]->Checked );
+        TiXMLAtr::Set( eDev, "hart_tested", hartResults[iDev].tested );
+        TiXMLAtr::Set( eDev, "hart_ok", hartResults[iDev].ok );
+        if (hartResults[iDev].text != "" && hartResults[iDev].tested){
+            TiXML::CreateChild(eDev, "hart_text")->LinkEndChild( new TiXmlText(hartResults[iDev].text.c_str()) );
+        }
+
         for( unsigned iKf=0; iKf<kfsLstSize; ++iKf )
         {
             const AnsiString s = GetKef(iDev, iKf);
@@ -411,6 +426,7 @@ void ClearDevicesData()
     repTab.clear();
     paspTab.clear();
     chartTab.clear();
+    hartResults.clear();
 
 }
 //------------------------------------------------------------------------------
@@ -437,6 +453,18 @@ void LoadFile(const AnsiString& fn)
         AddDevice(serial, addy);
         const unsigned nDev = lvDevs->Items->Count-1;
         lvDevs->Items->Item[nDev]->Checked = TiXMLAtr::Get( eDev, "ֲûבנאם", true );
+
+
+        hartResults[Count()-1].tested = TiXMLAtr::Get( eDev, "hart_tested", false );
+        hartResults[Count()-1].ok = TiXMLAtr::Get( eDev, "hart_ok", false );
+
+        TiXmlNode *eHartText = TiXML::ChildElement( eDev, "hart_text");
+        if (eHartText != NULL){
+            eHartText = eHartText->FirstChild();
+            if(eHartText != NULL && eHartText->ToText() != NULL) {
+                hartResults[Count()-1].text = AnsiString(eHartText->Value());
+            }
+        }
         TiXmlElement *eKoefs = TiXML::ChildElement( eDev, "ך‎פû");
 
         /*
@@ -538,6 +566,8 @@ unsigned Serial(unsigned nDev)
     return StrToInt( Lv::Get(lvDevs, 0, nDev) );
 }
 //------------------------------------------------------------------------------
+
+
 
 Nums GetAddys()
 {
@@ -818,6 +848,22 @@ void PromptUserChangeDevice(unsigned nDev)
     Lv::Set(lvDevs, 0, nDev, serial);
 }
 
+
+void SetHartResult(byte addr, bool ok, AnsiString text)
+{
+    int nDev = IndexOfAddy(addr);
+    assert(nDev >= 0 && nDev <= Count());
+    hartResults[nDev].tested = true;
+    hartResults[nDev].ok = ok;
+    hartResults[nDev].text = text;
+
+}
+
+HartResult GetHartResult(int nDev)
+{
+     assert(nDev >= 0 && nDev <= Count());
+     return hartResults[nDev];
+}
 
 
 //------------------------------------------------------------------------------

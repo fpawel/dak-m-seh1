@@ -58,6 +58,7 @@ using std::cout;
     MyTransferTask::Sleep(mms, true, ss);\
     RETURN_IF_STOPED_;
 //------------------------------------------------------------------------------
+CtrlSysImpl::IOSets IOSets(){ return CtrlSys::Instance().GetIOSets(); }
 ModbusAdapter& Modbus(){ return *CtrlSys::Instance().GetIOSets().modbus; }
 
 
@@ -589,7 +590,7 @@ void AdjustCurrentTask::PerformActionForAddy(unsigned addy, bool& isComplete, bo
     const double k336 = 16/(i2-i1);
     Form1->AddAddyLog( addy, MYSPRINTF_("калибровка тока K336=%g", k336) );
     WriteModbusFloat( Modbus(), addy, cmd_set_k_336, k336);
-    
+
     WriteModbusFloat( Modbus(), addy, DAK::Cmd::Code::set_tok, 4);
     SLEEP_;
     const double i3 = DAK::GetDevState(addy).current;
@@ -697,49 +698,158 @@ void SelectGasTask::PerformActionForAddy(unsigned addy, bool& isComplete, bool& 
     WriteModbusFloat( Modbus(), addy, DAK::Cmd::Code::reset, 0);
 }
 
+HANDLE OpenPipe() {
+    return CreateFileW( L"\\\\.\\pipe\\$TestHart$",
+        GENERIC_READ | GENERIC_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        0,
+        0);
+}
 
-void runTestHart()
-{
-    Form1->Hide();
+bool ReadIntFromPipe(HANDLE hPipe, int &result ) {
+    unsigned char b[4];
+    DWORD readed_count;
+    if ( !ReadFile(hPipe, b, 4, &readed_count, NULL) ){
+        return false;
+    }
+    result = *((int *) b);
+    return true;
+}
 
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
+bool ReadByteFromPipe(HANDLE hPipe, byte &result ) {
+    unsigned char b[1];
+    DWORD readed_count;
+    if ( !ReadFile(hPipe, b, 1, &readed_count, NULL) ){
+        return false;
+    }
+    result = *((byte *) b);
+    return true;
+}
 
-    ZeroMemory( &si, sizeof(si) );
-    si.cb = sizeof(si);
-    ZeroMemory( &pi, sizeof(pi) );
+bool ReadMessageFromPipe(HANDLE hPipe, byte& addr, int& level, AnsiString &text ) {
 
-    AnsiString path =
-        AnsiString(MyGetExePath().c_str() )+ "\\MIL82\\MIL82.exe";
-
-    // Start the child process.
-    if( !CreateProcess( NULL,   // No module name (use command line)
-        path.c_str(),   // Command line
-        NULL,           // Process handle not inheritable
-        NULL,           // Thread handle not inheritable
-        FALSE,          // Set handle inheritance to FALSE
-        0,              // No creation flags
-        NULL,           // Use parent's environment block
-        NULL,           // Use parent's starting directory
-        &si,            // Pointer to STARTUPINFO structure
-        &pi )           // Pointer to PROCESS_INFORMATION structure
-    )
-    {
-        AnsiString s;
-        s.sprintf("CreateProcess failed (%d).\n", GetLastError());
-
-        Form1->AddLog(s);
-        return;
+    if (!ReadByteFromPipe(hPipe, addr ) ) {
+        return false;
     }
 
-    // Wait until child process exits.
-    WaitForSingleObject( pi.hProcess, INFINITE );
+    if (!ReadIntFromPipe(hPipe, level ) ) {
+        return false;
+    }
 
-    // Close process and thread handles.
-    CloseHandle( pi.hProcess );
-    CloseHandle( pi.hThread );
+    int strLen;
+    if (!ReadIntFromPipe(hPipe, strLen ) ) {
+        return false;
+    }
 
-    Form1->Show();
+    char *pStr = new char [strLen+1];
+    DWORD readed_count;
+    if ( !ReadFile(hPipe, pStr, strLen, &readed_count, NULL) ){
+        // printf("ReadFile failed");
+        return false;
+    }
+    text = AnsiString(pStr, strLen );
+    return true;
 }
+
+void TestHartTask::PerformAction()
+{
+    //DAK::GetDevState(addy, false);
+    CtrlSysImpl::IOSets sets = CtrlSys().Instance().GetIOSets();
+    STARTUPINFO si = {0};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi = {0};
+    AnsiString cmdStr =
+        AnsiString().sprintf("hartDakSeh1.exe %s %s %d",
+            sets.modbusPortName, sets.hart, sets.stendAddy);
+
+    const Devs::Nums addrs = Devs::GetSelectedAddys();
+    for( unsigned i=0; i<addrs.size(); ++i )
+    {
+        cmdStr = cmdStr + " " + IntToStr(addrs[i]);
+    }
+
+    //const BOOL isOk =
+    ::CreateProcess
+    (
+        // pointer to name of executable module
+         (MyGetExePath() + "\\hartDakSeh1.exe").c_str(),
+        //"C:\\GOPATH\\src\\fpawel\\hartDakSeh1\\hartDakSeh1.exe",
+
+        // pointer to command line string
+        cmdStr.c_str(),
+        NULL,	                    // pointer to process security attributes
+        NULL,	                    // pointer to thread security attributes
+        TRUE,	                    // handle inheritance flag
+        0,	                        // creation flags
+        NULL,	                    // pointer to new environment block
+
+        // pointer to current directory name
+        MyGetExePath().c_str(),
+        //"C:\\GOPATH\\src\\fpawel\\hartDakSeh1\\",
+
+        &si,	                    // pointer to STARTUPINFO
+        &pi 	                    // pointer to PROCESS_INFORMATION
+    );
+    Sleep(2000);
+
+    HANDLE hPipe = OpenPipe();
+    if (hPipe == INVALID_HANDLE_VALUE){
+        Form1->LogError( "ошибка конфигурации: hPipe == INVALID_HANDLE_VALUE" );
+        MyMessageBox(Form1->Handle, "ошибка конфигурации", "Проверка HART протокола",
+            MB_SYSTEMMODAL | MB_APPLMODAL | MB_OK | MB_ICONERROR);
+        return;
+    }
+    
+    AnsiString msgText, msgResult;
+    int msgLevel;
+    byte msgAddr;
+
+    bool hasErros;
+    while ( ReadMessageFromPipe(hPipe, msgAddr, msgLevel, msgText)) {
+
+        if(msgAddr==0) {
+            if(msgLevel==0 || msgLevel==1){
+                if (msgResult != "") {
+                    msgResult += "\n";
+                }
+                msgResult += msgText.Trim();
+            }
+
+            if(msgLevel==0 ){
+                Form1->LogError( msgText.Trim() );
+            } else {
+                Form1->AddLog( msgText.Trim() );
+            }
+            continue;
+        }
+        if(msgLevel==0 ){
+            Form1->FixScripResultForAddy(msgAddr, msgText.Trim(), true);
+            hasErros = true;
+            Devs::SetHartResult(msgAddr, false, msgText.Trim());
+        } else if(msgLevel==1 ){
+            Form1->FixScripResultForAddy(msgAddr, msgText.Trim(), false);
+            Devs::SetHartResult(msgAddr, true, msgText.Trim());
+        } else {
+            Form1->AddAddyLog( msgAddr, msgText.Trim() );
+        }
+    }
+    CloseHandle(hPipe);
+    // Close process and thread handles.
+    ::CloseHandle( pi.hProcess );
+    ::CloseHandle( pi.hThread );
+    // Wait until child process exits.
+    ::WaitForSingleObject( pi.hProcess, INFINITE );
+
+    Devs::SaveFile( ( MyGetExePath()+"devices.xml" ).c_str() );
+
+
+    MyMessageBox(Form1->Handle, msgResult.c_str(), "Проверка HART протокола",
+        MB_SYSTEMMODAL | MB_APPLMODAL | MB_OK |
+            (hasErros ? MB_ICONWARNING : MB_ICONINFORMATION)  );
+}
+
+
 
 

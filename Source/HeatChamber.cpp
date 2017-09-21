@@ -11,6 +11,7 @@
 #include "MasterSlaveIO.h"
 #include "MyExcpt.hpp"
 #include "Unit1.h"
+#include "boost\regex.hpp"
 //------------------------------------------------------------------------------
 #pragma package(smart_init)
 //------------------------------------------------------------------------------
@@ -66,34 +67,70 @@ bool SuccessedWRDCommand(const char* rxd, unsigned len)
 	    std::equal( rxd, rxd+len, goodAnswerOnWRDCommand );
 }
 //------------------------------------------------------------------------------
-bool SuccsecedGetTCommand( const char* rxd, unsigned len )
+bool SuccsecedGetTCommand( const char* rxd, unsigned len, double& t, double& setpoint, AnsiString& error )
 {
-    static const byte goodOtvet[] =
-		{0x02, 0x30, 0x31, 0x52, 0x52, 0x44, 0x2C };
+    std::string::const_iterator xItStart = rxd, xItEnd = rxd + len, xIt = xItStart;
+    boost::cmatch xResults;
+    const char re[] = "01RRD,OK,([0-9a-fA-F]{4,4}),([0-9a-fA-F]{4,4})\r\n$";
+    if( !boost::regex_search(xIt, xItEnd, xResults, boost::regex(re) ) )
+    {
+        error = "не соответствует образцу";
+        return false;
+    }
 
-    return std::equal( rxd, rxd+array_size(goodOtvet), goodOtvet );
+    if (xResults.size() < 3)
+    {
+        error = "менее двух групп";
+        return false;
+    }
+    std::string str;
+
+    str = std::string(xResults[1].first, xResults[1].second);
+    t = myHexToInt(str.c_str()) / 10.0 ;
+
+    str = std::string(xResults[2].first, xResults[2].second);
+    setpoint = myHexToInt(str.c_str()) / 10.0;
+
+    return true;
 }
 //------------------------------------------------------------------------------
 namespace Cmd
 {
     const AnsiString
-		getT 		= "01RRD,02,0001,0002", 	// 	"Запрос текущей темературы камеры"
-		setFxMd 	= "01WRD,01,0104,0001",		// "Перевод камеры в режим фиксированной работы
-		setStart	= "01WRD,01,0101,0001",		// "Старт"
-		setStop		= "01WRD,01,0101,0004",		// "стоп"
+		getT 		    = "01RRD,02,0001,0002", 	// 	"Запрос текущей темературы камеры"
+
+		setFxMd 	    = "01WRD,01,0104,0001",		// "Перевод камеры в режим фиксированной работы
+
+		setStart800	    = "01WRD,01,0101,0001",		// "Старт"
+		setStop800      = "01WRD,01,0101,0004",		// "стоп"
 		// Задание уставки val в режиме фиксированной работы
-		setT = "01WRD,01,0102,";
+		setT800         = "01WRD,01,0102,",
+
+		setStart2500	= "01WRD,01,0102,0001",		// "Старт"
+		setStop2500     = "01WRD,01,0102,0004",		// "стоп"
+		// Задание уставки val в режиме фиксированной работы
+		setT2500        = "01WRD,01,0104," ;
 };
 //------------------------------------------------------------------------------
 MasterSlaveIOImpl& IO()
 {
     return *CtrlSys().Instance().GetIOSets().heatCham;
 }
+
+AnsiString TermoType()
+{
+    return CtrlSys().Instance().GetIOSets().termoType;
+}
+
+bool IsTermoType800()
+{
+    return TermoType() == AnsiString("800");
+}
 //------------------------------------------------------------------------------
 void SendControlRequest(const AnsiString &cmd, const AnsiString &msg)
 {
     const VInt8 req = MakeRequest(cmd);
-    MYCOUT_("Управление термокамерой: %s, %s\n", msg, cmd ));
+    MYCOUT_("Управление термокамерой %s: %s, %s\n", TermoType(), msg, cmd ));
     IO().Send( req.begin(), req.end(), true );
     if(  !SuccessedWRDCommand( IO().RxD(), IO().RxDSize() ) )
         MY_THROW_("Ошибка термокамеры!");
@@ -120,7 +157,12 @@ void SetSetpoint(int t)
         s = s.substr(0, s.size()-1);
     }
 
-    SendControlRequest( Cmd::setT + s.c_str(), MYSPRINTF_("уставка %g", t/10.0) );
+    AnsiString setT = Cmd::setT800;
+    if (!IsTermoType800()){
+        setT = Cmd::setT2500;
+    }
+
+    SendControlRequest( setT + s.c_str(), MYSPRINTF_("уставка %g", t/10.0) );
 
 
     Form1->btnHeatchamSetpoint->Caption = t/10.0;
@@ -128,11 +170,19 @@ void SetSetpoint(int t)
 }
 void Start()
 {
-    SendControlRequest( Cmd::setStart, "старт внешнего управления" );
+    AnsiString setStart = Cmd::setStart800;
+    if (!IsTermoType800()){
+        setStart = Cmd::setStart2500;
+    }
+    SendControlRequest( setStart, "старт внешнего управления" );
 }
 void Stop()
 {
-    SendControlRequest( Cmd::setStop, "остановка внешнего управления" );
+    AnsiString setStop = Cmd::setStop800;
+    if (!IsTermoType800()){
+        setStop = Cmd::setStop2500;
+    }
+    SendControlRequest( setStop, "остановка внешнего управления" );
 }
 void Fix()
 {
@@ -147,13 +197,15 @@ double GetTemperature1()
     IO().Send( req.begin(), req.end(), true );
     const char *rxd = IO().RxD();
     MYCOUT_("Термокамера говорит: \"%s\"\n", AnsiString(rxd, IO().RxDSize() ) ));
-    if(  !SuccsecedGetTCommand( rxd, IO().RxDSize() ) )
-        MY_THROW_("Ошибка термокамеры!");
 
-    const char* pStrTemperature = rxd+10;
-    const AnsiString sTemperature(pStrTemperature,4);
-    
-    return myHexToInt(sTemperature)/10.0;
+    double t,setpoint;
+    AnsiString error;
+
+    if(  !SuccsecedGetTCommand( rxd, IO().RxDSize(), t, setpoint, error ) ) {
+        MY_THROW_( AnsiString("Ошибка термокамеры. ") + error);
+    }
+
+    return t;
 }
 double GetTemperature()
 {

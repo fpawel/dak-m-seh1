@@ -39,6 +39,8 @@ namespace AppSetsGrdItems
 
     	COM,
         COM_heatcham,
+        COM_hart,
+        TermoType,
 
     	Timeout,
     	WaitDelay,
@@ -70,6 +72,8 @@ namespace AppSetsGrdItems
     "Параметр",
     "COM-порт приборов",
     "COM-порт термокамеры",
+    "COM-порт HART модема",
+    "Термокамера",
 
     "таймаут ответа",
     "задержка отправки",
@@ -115,6 +119,7 @@ __published:	// IDE-managed Components
     TButton *Button2;
     TCheckBox *CheckBox1;
     TLabel *Label1;
+    TComboBox *ComboBoxTermoType;
 	void __fastcall Button1Click(TObject *Sender);
 	void __fastcall FormActivate(TObject *Sender);
 	void __fastcall CheckListBox1ClickCheck(TObject *Sender);

@@ -311,7 +311,6 @@ private:
     virtual void PerformActionForAddy(unsigned addy, bool& isComplete, bool& isFailed);
 };
 
-void runTestHart();
 class TestHartTask : public ScenaryAction
     {
     public:
@@ -320,13 +319,7 @@ class TestHartTask : public ScenaryAction
 
         virtual AnsiString ClassId() const { return "TestHartTask"; }
         virtual AnsiString What() const { return "Проверка HART проткола"; }
-        //virtual void DoSaveXML(TiXmlElement* node) const {}
-        //virtual void DoLoadXML(TiXmlElement* node){}
-        //virtual void OnBeginTransfer(bool) {}
-        virtual void PerformAction()
-        {
-           runTestHart();
-        }
+        virtual void PerformAction();
     };
 
 #endif

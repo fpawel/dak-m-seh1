@@ -37,7 +37,7 @@ namespace AppSetsGrdItems
             typedef std::set<unsigned> Rows;
             #define INIT_VALS_ Rows( boost::assign::list_of<int>
             const Rows  sets[] = {
-                INIT_VALS_ (COM)(COM_heatcham)(JurikStendAddy)(PneumoAddy) ),
+                INIT_VALS_ (COM)(COM_heatcham)(COM_hart)(TermoType)(JurikStendAddy)(PneumoAddy) ),
                 INIT_VALS_ (Gas)(Scale)(SoftVer)(Isp) ),
                 INIT_VALS_ (Timeout)(WaitDelay)(SilentTime)(RepeatCount)(Timeout_heatcham)
                     (WaitDelay_heatcham)(SilentTime_heatcham)(RepeatCount_heatcham)(ShowComPortLog) ) };
@@ -92,6 +92,9 @@ __fastcall TFormAppSetsDlg::TFormAppSetsDlg(TComponent* Owner, PMyStrValRef* ref
     using namespace Row;
     StringgridControl::RegisterRowControl( cbPortName, grd1, COM );
     StringgridControl::RegisterRowControl( cbPortName, grd1, COM_heatcham );
+    StringgridControl::RegisterRowControl( cbPortName, grd1, COM_hart );
+    StringgridControl::RegisterRowControl( ComboBoxTermoType, grd1, TermoType );
+
     StringgridControl::RegisterOneEditControl( edGrd, grd1  );
     StringgridControl::RegisterRowControl( ComboBox1, grd1, ShowComPortLog );
     StringgridControl::RegisterRowControl( cbGas, grd1, Gas );

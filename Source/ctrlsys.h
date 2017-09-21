@@ -21,6 +21,7 @@ public:
     
     struct IOSets
     {
+        AnsiString hart, termoType, modbusPortName;
         ModbusAdapter *modbus;
         MasterSlaveIOImpl* heatCham;
         unsigned pneumoAddy, stendAddy;
@@ -43,7 +44,7 @@ public:
     AnsiString FormatTestParam(unsigned nTest, unsigned nPGS, const std::vector<unsigned> &params);
     AnsiString FormatTestParam(unsigned nTest, unsigned nPGS, unsigned param);
 
-private:
+
     class Impl;
     boost::shared_ptr<Impl> impl_;
 };
@@ -55,6 +56,8 @@ bool IsNotAnsweredAddy(unsigned addy);
 bool CheckIndication(unsigned addy, double &conc, double pgs, double dConcMax);
 void AdjustNull();
 void AdjustEnd();
+
+
 //------------------------------------------------------------------------------
 
 

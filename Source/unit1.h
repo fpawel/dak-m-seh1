@@ -235,7 +235,7 @@ private:	// User declarations
     void HandleStopOrStartThread(const AnsiString& state, bool isStartThreadMsg);
 
     
-    void FixScripResultForAddy(unsigned addy, const AnsiString& s, bool failed);
+
     void ResetScenaryComboBox();
 
     void ShowCurrentScenary();
@@ -249,6 +249,8 @@ private:	// User declarations
 public:		// User declarations
 	__fastcall TForm1(TComponent* Owner);
     __fastcall ~TForm1();
+
+    void FixScripResultForAddy(unsigned addy, const AnsiString& s, bool failed);
 
     void AddLog( const AnsiString& s, const RichTextAttr &atrs = RichTextAttr() );
     void AddAddyLog( unsigned addy, const AnsiString& s, const RichTextAttr &atrs = RichTextAttr() );

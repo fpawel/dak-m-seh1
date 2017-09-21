@@ -96,9 +96,14 @@ void CreatePasport(unsigned addy, bool openIt)
     AddText( tbl[2][1], "Адрес MODBUS датчика" );
     AddText( tbl[3][1], Devs::GetSensorSlave(nDev).c_str(),  bold1 );
 
+    Devs::HartResult hr = Devs::GetHartResult(nDev);
+
+
+    if (hr.tested) {
+        AddText( tbl[2][2], "Проверка HART протокола" );
+        AddText( tbl[3][2], hr.text.c_str(),  TextAttr().Bold().Color(hr.ok ? "blue" : "red") );
+    }
     Devs::GetFramePaspOfAddy(addy)->Add2Report( body );
-
-
 
     Word year, month, day, hour, minute, second, milliSecond;
     DecodeDateTime( Now(), year, month, day, hour, minute, second, milliSecond);

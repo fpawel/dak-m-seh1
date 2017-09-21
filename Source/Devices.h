@@ -57,6 +57,8 @@ namespace Devs
     unsigned Addy(unsigned nDev);
     unsigned Serial(unsigned nDev);
 
+
+
     int IndexOfAddy(unsigned addy);
     bool IsSelectedAddy(unsigned addy);
     bool HasOneSelectedAddy();
@@ -83,6 +85,14 @@ namespace Devs
 
     void PromptUserInputDevice();
     void PromptUserChangeDevice(unsigned nDev);
+
+    struct HartResult {
+        AnsiString text;
+        bool tested,ok;
+    };
+
+    void SetHartResult(byte addr, bool ok, AnsiString text);
+    HartResult GetHartResult(int ndev);
 };
 //------------------------------------------------------------------------------
 #endif
