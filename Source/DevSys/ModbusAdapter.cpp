@@ -50,16 +50,16 @@ ModbusAdapter::ModbusAdapter(const MasterSlaveIOSettings &sets, MyPort *port ) :
 {
 }
 //------------------------------------------------------------------------------
-#define THROW_TRANSFER_EXCEPTION_(MSG)\
-	throw PMyExcpt( new MyModbusAdapterException( __FILE_LINE__, MYSPRINTF_("%d: %s", addy, MSG) ) )
-//------------------------------------------------------------------------------
 bool ModbusAdapter::TestAnswer(const unsigned char* reciveBegin, const unsigned char* reciveEnd)
 {
     const unsigned addy = Addy(), commandCode=CommandCode();
 	if( addy==0) return false;
 	const int rxdLen = reciveEnd - reciveBegin;
     assert(rxdLen>=0);
-    if( rxdLen==0 ) THROW_TRANSFER_EXCEPTION_( "не отвечает" );
+    if( rxdLen==0 ) {
+    	MyCout( AnsiString().sprintf("%s: не отвечает", MyBuffToStr1( reciveBegin, reciveEnd )) );
+        return true;
+    }
     if( rxdLen<4 ) {
     	MyCout( AnsiString().sprintf(" длина ответа %s равна %d, должна быть не менее 4",
         		MyBuffToStr1( reciveBegin, reciveEnd ), rxdLen) );

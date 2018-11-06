@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="Windows-1252" ?>
+<Main>
+    <Ïðèáîð_1 àäðåñ="1" Cco="2" Ver_PO="2" Pribor_type="5" SER_NUMBER="4" ED_IZMER_1="3" GAS_TYPE_1="3" />
+    <Ïðèáîð_2 àäðåñ="2" Cch="12" Cco="2" Pribor_type="5" ED_IZMER_1="5">
+        <LIN_CH>
+            <Cch _1="r" />
+            <PGSch _1="r" />
+        </LIN_CH>
+        <LIN_CO2>
+            <Cco2 _2="g" _3="h" />
+            <PGSco2 _2="g" _3="h" />
+        </LIN_CO2>
+        <NELIN_CO2_T>
+            <Var2cî2 _1="f" />
+            <ÑO2_kanal _1="f" />
+        </NELIN_CO2_T>
+    </Ïðèáîð_2>
+    <Ïðèáîð_16 àäðåñ="16" Cch="2" Cco="2" Pribor_type="5" SER_NUMBER="5" ED_IZMER_1="5" PREDEL_LO_1="5">
+        <LIN_CO>
+            <Cco _1="5" />
+            <PGSco _1="5" />
+        </LIN_CO>
+    </Ïðèáîð_16>
+    <Ïðèáîð_8 àäðåñ="8" MAX_COUNT_REG="2" GAS_TYPE_1="2">
+        <LIN_CO2>
+            <Cco2 _2="5" />
+            <PGSco2 _2="5" />
+        </LIN_CO2>
+    </Ïðèáîð_8>
+</Main>

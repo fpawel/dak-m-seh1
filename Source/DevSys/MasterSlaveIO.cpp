@@ -149,7 +149,8 @@ void MasterSlaveIOImpl::SendTxDAndGetAnswer(unsigned timeOutArg)
         rxd_.resize(oldReadBuffSize + rxdSize);
         void *pReadBuff = reinterpret_cast<void*>( &rxd_.at(oldReadBuffSize) );
         port_->Read( pReadBuff, rxdSize );
-        //LogOut( "часть: "+ MyBuffToStr( (const char *)pReadBuff, (const char *)pReadBuff+rxdSize )+"\n");
+
+
         // ждЄм ещЄ некоторое врем€ silentTime_ и провер€ем длину RxD.
         // ≈сли не 0, продолжаем считывание
         // иначе считаем что посылка завершена
@@ -175,17 +176,15 @@ void MasterSlaveIOImpl::SendTxDAndGetAnswer(unsigned timeOutArg)
     if( !rxd_.empty() )
     {
     	LogOut( "\nrxd:\n"+ PrintVInt8( rxd_ )+"\n" );
-        
+        if(onAnswer_) onAnswer_(true);
+
     }
     else
     {
     	LogOut( " Ќет ответа!\n" );
-
+        MyCout( port_->Description()+" не отвечает", MY_SET_CONSOLE_RED_TEXT);
         if(onAnswer_) onAnswer_(false);
-        throw PMyExcpt( new MyNoAnswerException(
-            __FILE_LINE__, port_->Description()+" не отвечает" , this ) );
     }
-    if(onAnswer_) onAnswer_(true);
 }
 //------------------------------------------------------------------------------
 // открыть канал св€зи с текущими настройками

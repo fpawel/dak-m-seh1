@@ -36,6 +36,13 @@ typedef bool (__closure *TBoolMthd )();
 typedef void (__closure *TVoid_PDoubleMthd)(const double*);
 typedef void (__closure *TVoid_PDoublePDoubleMthd)(const double*, const double*);
 
+template<typename T> struct Maybe {
+    T value;
+    bool ok;
+};
+
+
+
 //------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------

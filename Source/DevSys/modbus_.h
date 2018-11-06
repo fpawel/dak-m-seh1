@@ -22,21 +22,20 @@ void WriteModbusFloat(  ModbusAdapter&, unsigned slave, unsigned cmd, double val
 void WriteBPS21M( ModbusAdapter& protocol, unsigned slave, unsigned nDevice,
     unsigned cmdCode, bool high1_low0, double val );
 
-
-
-
-double ReadModbusFloat(  ModbusAdapter&, const unsigned slave, unsigned regAddr );
+Maybe<double> ReadModbusFloat(  ModbusAdapter&, const unsigned slave, unsigned regAddr );
 
 struct ModbusValue1T
 {
     double conc;
     bool porog1, porog2;
+    bool ok; 
 };
 ModbusValue1T ReadModbusValue1(  ModbusAdapter& protocol, const unsigned slave, unsigned regAddr );
 
 
 void ReadModbusRegistersData(  ModbusAdapter&, unsigned addy, unsigned regNum, unsigned regCount );
-unsigned ReadModbusUnsigned(ModbusAdapter& protocol, unsigned addy, unsigned regNum);
+
+Maybe<unsigned> ReadModbusUnsigned(ModbusAdapter& protocol, unsigned addy, unsigned regNum);
 
 
 typedef void (*OnReadModbusFloatValue)(unsigned addr, unsigned varnum, double value);

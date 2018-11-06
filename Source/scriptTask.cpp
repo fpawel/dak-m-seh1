@@ -420,12 +420,13 @@ void ForEachAddys::PerformAction()
                     failed_.push_back(addy);
             }
             catch(...) {
+                AnsiString s;
                 const MyException *excpt = MY_RETHROW_.get();
-                const MyNoAnswerException *eNoAns = excpt->As<MyNoAnswerException>();
-                if( eNoAns && eNoAns->IO()==&modbus.MasterSlave() && modbus.Addy()==addy ) {
-                    failed_.push_back(addy);
-                    Form1->LogError( "Не отвечает!");
-                } else throw;
+                if (excpt != NULL) {
+                    s = excpt->ToStringAll();
+                }
+                failed_.push_back(addy);
+                Form1->LogError( IntToStr(addy) + ": нет связи: " + s + "\n");
             }
         }
         addys_.pop_front();

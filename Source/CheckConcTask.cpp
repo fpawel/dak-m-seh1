@@ -118,26 +118,36 @@ void FixTemperatureValTask::PerformActionForAddy(unsigned addy, bool& isComplete
     assert(frameDevicePasport);
     const unsigned row = 1 + gas_, col = 1 + nPt_*4;
 
-    const double
+    Maybe<double>
         var1 = DAK::ReadVar1(addy, true),
         T = DAK::ReadT(addy, true),
-        conc = DAK::GetModbusConc(addy, true).conc,
         i_lamp = DAK::ReadIlampOn (addy, true);
+
+    DAK::ConcT conc = DAK::GetModbusConc(addy, true);
 
     int ndev = Devs::IndexOfAddy(addy);
     if(ndev>-1 && ndev<Devs::Count()) {
         unsigned knum = DAK::Kef::GetNumberOfKNum(33);
-        if(knum!=-1) {  
-
-            frameDevicePasport->Set(DAK::ReadKef(addy, knum),  DAK::Test::temperature, 0, 0);
+        if(knum!=-1) {
+            Maybe<double> kefValue = DAK::ReadKef(addy, knum);
+            if (kefValue.ok) {
+                frameDevicePasport->Set(kefValue.value,  DAK::Test::temperature, 0, 0);
+            }
         }
     }
 
-
-    frameDevicePasport->Set(T,          DAK::Test::temperature, col+0, row);
-    frameDevicePasport->Set(var1,       DAK::Test::temperature, col+1, row);
-    frameDevicePasport->Set(conc,       DAK::Test::temperature, col+2, row);
-    frameDevicePasport->Set(i_lamp,     DAK::Test::temperature, col+3, row);
+    if (T.ok){
+        frameDevicePasport->Set(T.value, DAK::Test::temperature, col+0, row);
+    }
+    if (var1.ok) {
+        frameDevicePasport->Set(var1.value, DAK::Test::temperature, col+1, row);
+    }
+    if(conc.ok){
+        frameDevicePasport->Set(conc.value, DAK::Test::temperature, col+2, row);
+    }
+    if(i_lamp.ok){
+        frameDevicePasport->Set(i_lamp.value, DAK::Test::temperature, col+3, row);
+    }
 
     const DAK::Sets sets = DAK::Sets::Get();
 
@@ -145,16 +155,16 @@ void FixTemperatureValTask::PerformActionForAddy(unsigned addy, bool& isComplete
         int nku_col0 = 5;
         const AnsiString strConc20 = frameDevicePasport->Get( DAK::Test::temperature, nku_col0+2, row );
         double conc20;
-        if( DAK::Format::TryGetValue1(strConc20,conc20) ) {
-            double dConcT = conc - conc20;
+        if( conc.ok && T.ok && DAK::Format::TryGetValue1(strConc20,conc20) ) {
+            double dConcT = conc.value - conc20;
             double errorLimit = 5;
             bool isOk = true;
 
             if(!sets.isCH) {
                 double maxD = sets.maxPogr[gas_];
                 double pgs = sets.pgs[gas_];
-                dConcT = conc - pgs;
-                errorLimit = 0.5 * std::fabs( maxD*(T-20.0) ) / 10.0 ;
+                dConcT = conc.value - pgs;
+                errorLimit = 0.5 * std::fabs( maxD*(T.value-20.0) ) / 10.0 ;
             } else {
                 if(gas_>0) {
                     errorLimit = std::fabs( conc20 * 0.15 );
@@ -166,7 +176,7 @@ void FixTemperatureValTask::PerformActionForAddy(unsigned addy, bool& isComplete
 
             AnsiString sconc = "";
             sconc.sprintf( "%s %s%s%s [%s]",
-                ffloat(conc,3),
+                ffloat(conc.value,3),
                 ffloat(dConcT,3),
                 isOk ? "<" : ">",
                 ffloat(errorLimit,3),

@@ -51,10 +51,11 @@ ConcT  GetModbusConc(unsigned addy, bool enableLog)
     ConcT ret;
 
     const ModbusValue1T v = ReadModbusValue1(  Modbus(), addy, 0 );
-    ret.conc = v.conc;
+    ret.value = v.conc;
+    ret.ok = v.ok;
     //ret.conc = 1.1+random(10)/10.0;
 
-    ret.sConc = Format::Conc(ret.conc);
+    ret.sConc = Format::Conc(ret.value);
     LogValue(addy, ret.sConc, "конц.", Vars::C, enableLog);
     return ret;
 }
@@ -121,59 +122,59 @@ void WriteKef(unsigned addy, unsigned kNum)
     Form1->AddAddyLog(addy, s );
 }
 
-double ReadKef(unsigned addy, unsigned kNum)
+Maybe<double> ReadKef(unsigned addy, unsigned kNum)
 {
     const DAK::Kefs kefs = DAK::GetKefs();
     const DAK::Kef kef = kefs[kNum];
 
-    const double val = ReadModbusFloat( Modbus(), addy, 224 + kef.n*2 );
-    //double val = 123;
+    Maybe<double> v = ReadModbusFloat( Modbus(), addy, 224 + kef.n*2 );
 
-    Devs::SetKefOfAddy(addy, kNum, val);
-    AnsiString s;
-    s.sprintf("считан кэф.%d %s=%g", kef.n, kefs[kNum].caption, val);
-    Form1->AddAddyLog(addy, s );
-    return val;
+    if (v.ok) {
+        Devs::SetKefOfAddy(addy, kNum, v.value);
+        AnsiString s;
+        s.sprintf("считан кэф.%d %s=%g", kef.n, kefs[kNum].caption, v.value);
+        Form1->AddAddyLog(addy, s );
+    }
+
+    return v;
 }
 
-double ReadVar1(unsigned addy, bool enableLog)
+Maybe<double> ReadVar1(unsigned addy, bool enableLog)
 {
-    const double val = ReadModbusFloat( Modbus(), addy, 16 );
-    //double val = 4.567;
-
-    LogValue(addy, val, "var1", Vars::var1, enableLog);
+    Maybe<double> val = ReadModbusFloat( Modbus(), addy, 16 );
+    LogValue(addy, val.value, "var1", Vars::var1, enableLog);
     return val;
 }
 
 // ток излучателя
-double ReadIlampWorkkRefk (unsigned addy, bool enableLog)
+Maybe<double> ReadIlampWorkkRefk (unsigned addy, bool enableLog)
 {
         AnsiString s;
-    double val = ReadModbusFloat( Modbus(), addy, 4 );
+    Maybe<double> val = ReadModbusFloat( Modbus(), addy, 4 );
     if(enableLog) {
-        s.sprintf("Ilamp=%g", val);
+        s.sprintf("Ilamp=%g", val.value);
         Form1->AddAddyLog( addy, s);
     }
 
     val = ReadModbusFloat( Modbus(), addy, 14 );
     if(enableLog) {
-        s.sprintf("Workk=%g", val);
+        s.sprintf("Workk=%g", val.value);
         Form1->AddAddyLog( addy, s);
     }
 
     val = ReadModbusFloat( Modbus(), addy, 12 );
     if(enableLog) {
-        s.sprintf("Refk=%g", val);
+        s.sprintf("Refk=%g", val.value);
         Form1->AddAddyLog( addy, s);
     }
     return val;
 }
 
-double ReadIlampOn (unsigned addy, bool enableLog){
+Maybe<double> ReadIlampOn (unsigned addy, bool enableLog){
     AnsiString s;
-    double val = ReadModbusFloat( Modbus(), addy, 4 );
+    Maybe<double> val = ReadModbusFloat( Modbus(), addy, 4 );
     if(enableLog) {
-        s.sprintf("Ilamp=%g", val);
+        s.sprintf("Ilamp=%g", val.value);
         Form1->AddAddyLog( addy, s);
     }
     
@@ -182,10 +183,10 @@ double ReadIlampOn (unsigned addy, bool enableLog){
 }
 
 // датчик температуры
-double ReadT(unsigned addy, bool enableLog)
+Maybe<double> ReadT(unsigned addy, bool enableLog)
 {
-    const double val = ReadModbusFloat( Modbus(), addy, 2 );
-    LogValue(addy, val, "T\"C", Vars::Tpp, enableLog);
+    const Maybe<double> val = ReadModbusFloat( Modbus(), addy, 2 );
+    LogValue(addy, val.value, "T\"C", Vars::Tpp, enableLog);
     return val;
 }
 

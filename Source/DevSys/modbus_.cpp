@@ -12,6 +12,7 @@
 #include "AnsiStringUtils_.h"
 #include "guicon.h"
 #include "ModbusAdapter.h"
+#include "MyExcpt.hpp"
 
 
 
@@ -56,6 +57,17 @@ AnsiString BCDBuffToStr(const unsigned char* dt)
 
 
 //------------------------------------------------------------------------------
+
+void printError(AnsiString s)
+{
+   MyWCout( s, MY_SET_CONSOLE_RED_TEXT);
+}
+
+void printlnError(AnsiString s)
+{
+   printError( s + "\n");
+}
+
 void WriteModbus4Bytes( ModbusAdapter& protocol, const unsigned slave, unsigned cmd, const unsigned char* dt )
 {
 	//const AnsiString msg1 = FormatDeviceCommand(cmd, dt), msg = MYSPRINTF_( "%d:%s\n", slave, msg1 );
@@ -78,12 +90,12 @@ void WriteModbus4Bytes( ModbusAdapter& protocol, const unsigned slave, unsigned 
     txd[5] = cmd >> 8;
     txd[6] = cmd;
     std::copy( dt, dt+4, txd+7 );
-    
+
     protocol.PerformTransfer( slave, MODUS_WRITE_REGISTER_COMMAND_CODE, txd,
         txd+MODUS_WRITE_STR_LEN);
     if(slave==0) return;
     if( (protocol.AcceptedDataSize()!=4) || !std::equal(txd, txd+4, protocol.AcceptedData()) )
-        MY_THROW_( "Комманда 16: несоответсвие формата ответа." );
+        printError( AnsiString().sprintf("%d: Комманда 16: несоответсвие формата ответа\n",slave) );
 
 }
 //------------------------------------------------------------------------------
@@ -122,56 +134,107 @@ void ReadModbusRegistersData(  ModbusAdapter& protocol, unsigned slave, unsigned
     protocol.PerformTransfer( slave, MODUS_READ_REGISTER_COMMAND_CODE, txd, txd+4);
     const unsigned acceptedDataSize = protocol.AcceptedDataSize();
     if( acceptedDataSize!=waitStrLen + 1 ) {
-        
-        MY_THROW_( "Команда 3: несоответсвие формата ответа." );
+        printError( AnsiString().sprintf("%d: Команда 3: несоответсвие формата ответа\n",slave) );
     }
 }
 //------------------------------------------------------------------------------
-
+void printlnException(const FileLine& location)
+{
+    PMyExcpt e = RethrowMyException(location);
+    if (e.get()!= NULL){
+        printlnError("exception: " + e->ToStringAll());
+    }
+}
 
 ModbusValue1T ReadModbusValue1(  ModbusAdapter& protocol, unsigned addy, unsigned regAddr )
 {
+    assert (onReadModbusFloatValue != NULL);
     ModbusValue1T ret;
-    ReadModbusRegistersData( protocol, addy, regAddr, 2);
-    const unsigned char *rxd = protocol.AcceptedData()+1;
-    unsigned char dt[4];
-    std::copy(rxd, rxd+4, dt );
-    ret.porog1 = Getbit( dt[0], 3);
-    ret.porog2 = Getbit( dt[0], 4);
-    dt[0] &= 0x87;
-    ret.conc = BCDToFloat( dt );
-
-    if (onReadModbusFloatValue == NULL) {
-        throw "OnReadModbusFloatValue == NULL";
+    try
+    {
+        ReadModbusRegistersData( protocol, addy, regAddr, 2);
+        const unsigned char *rxd = protocol.AcceptedData()+1;
+        unsigned char dt[4];
+        std::copy(rxd, rxd+4, dt );
+        ret.porog1 = Getbit( dt[0], 3);
+        ret.porog2 = Getbit( dt[0], 4);
+        dt[0] &= 0x87;
+        ret.conc = BCDToFloat( dt );
+        ret.ok = true;
+        onReadModbusFloatValue(addy, regAddr, ret.conc);
     }
-    onReadModbusFloatValue(addy, regAddr, ret.conc);
-
-
+    catch(...)
+    {
+        printlnException(__FILE_LINE__);
+        ret.ok = false;
+    }
     return ret;
 }
-
 //------------------------------------------------------------------------------
-double ReadModbusFloat(  ModbusAdapter& protocol, const unsigned slave, unsigned regAddr )
+Maybe<double> ReadModbusFloat(  ModbusAdapter& protocol, const unsigned slave, unsigned regAddr )
 {
+    Maybe<double> result;
+    result.ok = false;
+    result.value = 0;
+
     ReadModbusRegistersData( protocol, slave, regAddr, 2);
-    const unsigned char *rxd = protocol.AcceptedData()+1;
-    unsigned char dt[4];
-    std::copy(rxd, rxd+4, dt );
-    dt[0] &= 0x87;
-
-    double val = BCDToFloat( dt );
-    if (onReadModbusFloatValue == NULL) {
-        throw "OnReadModbusFloatValue == NULL";
+    if ( protocol.AcceptedDataSize() < 5 ) {
+        return result;
     }
-    onReadModbusFloatValue(slave, regAddr, val);
+    assert (onReadModbusFloatValue != NULL);
+    unsigned char dt[4];
+    try
+    {
+        const unsigned char *rxd = protocol.AcceptedData()+1;
+        std::copy(rxd, rxd+4, dt );
+        dt[0] &= 0x87;
+    }
+    catch (...)
+    {
+        printlnException(__FILE_LINE__);
+        return result;
+    }
 
-    return val;
+    try
+    {
+        result.value = BCDToFloat( dt );
+    }
+    catch (...)
+    {
+        printlnException(__FILE_LINE__);
+        return result;
+    }
+    try
+    {
+        onReadModbusFloatValue(slave, regAddr, result.value);
+    }
+    catch (...)
+    {
+        printlnException(__FILE_LINE__);
+    }
+    result.ok = true;
+    return result;
 }
 //------------------------------------------------------------------------------
-unsigned ReadModbusUnsigned(ModbusAdapter&  protocol, unsigned addy, unsigned regNum)
+Maybe<unsigned> ReadModbusUnsigned(ModbusAdapter&  protocol, unsigned addy, unsigned regNum)
 {
-    ReadModbusRegistersData(  protocol, addy, regNum, 1 );
-    const unsigned char *rcv = protocol.AcceptedData()+1;
-    return rcv[0]*256 + rcv[1];
+    Maybe<unsigned> result;
+    result.ok = false;
+
+    try
+    {
+        ReadModbusRegistersData(  protocol, addy, regNum, 1 );
+        const unsigned char *rcv = protocol.AcceptedData()+1;
+        result.value = rcv[0]*256 + rcv[1];
+        result.ok = true;
+
+    }
+    catch (...)
+    {
+        printlnException(__FILE_LINE__);
+        result.ok = false;
+    }
+    return result;
+
 }
 //------------------------------------------------------------------------------

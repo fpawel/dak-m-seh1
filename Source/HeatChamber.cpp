@@ -196,7 +196,7 @@ double GetTemperature1()
     MYCOUT_("Запрос температуры темокамеры %s\n", Cmd::getT ));
     IO().Send( req.begin(), req.end(), true );
     const char *rxd = IO().RxD();
-    MYCOUT_("Термокамера говорит: \"%s\"\n", AnsiString(rxd, IO().RxDSize() ) ));
+    MYCOUT_("Термокамера: \"%s\"\n", AnsiString(rxd, IO().RxDSize() ) ));
 
     double t,setpoint;
     AnsiString error;

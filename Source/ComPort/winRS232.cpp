@@ -10,11 +10,17 @@
 //---------------------------------------------------------------------------
 #include "MyDCBHelper.h"
 #include "MyExcpt.hpp"
-#include "MyWinExcpt.hpp"
+//#include "MyWinExcpt.hpp"
 #include "CommSetsIOHelper.h"
 #include "guicon.h"
 //---------------------------------------------------------------------------
 #pragma package(smart_init)
+
+#define MY_SAFE_CALL_WIN_API(foo,params)\
+    if(!::##foo##params )\
+        MyCout( AnsiString().sprintf("%s %s: %s",__FILE_LINE__,"::"#foo"\n", ::GetLastError()), MY_SET_CONSOLE_RED_TEXT);
+
+
 // исключение от ClearCommError
 class MyClearCommErrorException : public MyException
 {
@@ -92,8 +98,7 @@ namespace RS232
 
         if( ret==INVALID_HANDLE_VALUE )
         {
-        	const AnsiString msg = AnsiString().sprintf("Порт %s занят!", portName);
-            MY_THROW_CLASS_(MyWindowsException, msg);
+        	MY_THROW_( AnsiString().sprintf("Порт %s занят!", portName) );
         }
         return ret;
     }
@@ -241,7 +246,7 @@ namespace RS232
         COMSTAT commStat = {0};
         MY_SAFE_CALL_WIN_API(ClearCommError,( hComm_, &commErrors, &commStat));
         if ( HasMaskCriticalError(commErrors) ){
-            MyCout( "Функция ClearCommError зафиксировала флаги критических ошибок: "+ ErrorsMaskToStr(commErrors),
+            MyCout( "Функция ClearCommError зафиксировала флаги критических ошибок: "+ ErrorsMaskToStr(commErrors)+"\n",
                 MY_SET_CONSOLE_RED_TEXT);
             return 0;
         }
@@ -257,9 +262,10 @@ namespace RS232
         if( (int)writenCount!=buffSize )
     	{
         	const AnsiString errMsg = AnsiString().sprintf(
-            	"%s, ошибка записи - записано %d байт из %d!",
+            	"%s, ошибка записи - записано %d байт из %d!\n",
             Description(), writenCount, buffSize );
-        	throw MyExcptionFactory::Create<MyException>(__FILE_LINE__, errMsg.c_str() );
+
+            MyCout( errMsg, MY_SET_CONSOLE_RED_TEXT);
     	}
         return writenCount;
     }

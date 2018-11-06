@@ -7,6 +7,7 @@
 #include <map>
 
 #include "vardef.hpp"
+#include "..\my_include\free_types_.h"
 
 
 namespace DAK
@@ -14,8 +15,9 @@ namespace DAK
     void InitializeConc();
     struct ConcT
     {
-        double conc;
+        double value;
         AnsiString sConc;
+        bool ok;
     };
     ConcT GetModbusConc(unsigned addy, bool enableLog = true);
 
@@ -30,12 +32,12 @@ namespace DAK
     DevState GetDevState(unsigned addy, bool enableLog = true);
 
     void WriteKef(unsigned addy, unsigned kNum);
-    double ReadKef(unsigned addy, unsigned kNum);
+    Maybe<double> ReadKef(unsigned addy, unsigned kNum);
 
-    double ReadVar1(unsigned addy, bool enableLog);
-    double ReadT(unsigned addy, bool enableLog);
-    double ReadIlampWorkkRefk (unsigned addy, bool enableLog);
-    double ReadIlampOn (unsigned addy, bool enableLog);
+    Maybe<double> ReadVar1(unsigned addy, bool enableLog);
+    Maybe<double> ReadT(unsigned addy, bool enableLog);
+    Maybe<double> ReadIlampWorkkRefk (unsigned addy, bool enableLog);
+    Maybe<double> ReadIlampOn (unsigned addy, bool enableLog);
 };
 //------------------------------------------------------------------------------
 
