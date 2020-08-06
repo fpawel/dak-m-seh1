@@ -54,8 +54,18 @@ ConcT  GetModbusConc(unsigned addy, bool enableLog)
     ret.value = v.conc;
     ret.ok = v.ok;
     //ret.conc = 1.1+random(10)/10.0;
+    if (!ret.ok) {
+        return ret;
+    }
 
-    ret.sConc = Format::Conc(ret.value);
+    Maybe<double> vFailure = ReadModbusFloat(  Modbus(), addy, 88 );
+    ret.ok = vFailure.ok;
+    ret.failureCode = vFailure.value;
+    if (!vFailure.ok) {
+        Form1->LogAddyError(addy, "не удалось считать регистр 88 (отказ)");
+    }
+
+    ret.sConc = Format::Conc(ret.value, ret.failureCode);
     LogValue(addy, ret.sConc, "конц.", Vars::C, enableLog);
     return ret;
 }
@@ -66,6 +76,14 @@ DevState GetDevState(unsigned addy, bool enableLog)
 
     CtrlSysImpl& ctrlSys = CtrlSys::Instance();
     DevState ret;
+    ret.ok = false;
+
+    Maybe<double> vFailure = ReadModbusFloat(  Modbus(), addy, 88 );
+    ret.failureCode = vFailure.value;
+    if (!vFailure.ok) {
+        Form1->LogAddyError(addy, "не удалось считать регистр 88 (отказ)");
+        return ret;
+    }
 
     ReadModbusRegistersData(  Modbus(), ctrlSys.GetIOSets().stendAddy, (addy-1)*2, 2 );
     const unsigned char *dt = Modbus().AcceptedData();
@@ -74,23 +92,25 @@ DevState GetDevState(unsigned addy, bool enableLog)
         acceptedDataSize = Modbus().AcceptedDataSize();
 
 
-    if( Modbus().AcceptedDataSize()!=5 )
-        throw PMyExcpt( new MyTransferException(__FILE_LINE__,
-           "Ошибка обмена со стендом", &Modbus().MasterSlave() ) );
+    if( Modbus().AcceptedDataSize()!=5 ){
+        Form1->LogAddyError(addy, "ошибка протокола стенда: ожидалось 5 байт ответа");
+        return ret;
+    }
+
     ret.current = 1.0*( dt[1]*256.0+dt[2])/100.0;
     const bool p1 = ( Getbit(dt[4], 1)==0 ), p2 = ( Getbit(dt[4], 2)==0 );
 
     //const bool p1 = 1, p2 = 1;
     //ret.current = 4+random(16)/16.0;
 
-    ret.sIout = Format::Iout(ret.current);
+    ret.sIout = Format::Iout(ret.current, ret.failureCode);
     ret.rele[RelePin::rele1] = p1;
     ret.rele[RelePin::rele2] = p2;
 
     LogValue(addy, ret.sIout,   "Iвых", Vars::Iout, enableLog);
 
     const double conc_i = I2Conc(ret.current);
-    ret.sConcI = Format::Conc(conc_i);
+    ret.sConcI = Format::Conc(conc_i, ret.failureCode);
     LogValue(addy, ret.sConcI,  "конц.ток", Vars::C_Iout, enableLog);
 
     ret.sPorog1 = Format::Porog1(p1),
@@ -98,10 +118,12 @@ DevState GetDevState(unsigned addy, bool enableLog)
 
     const DAK::Sets sets = DAK::Sets::Get();
     const unsigned isp = StrToIntDef(sets.ispolnenie,0);
-    const unsigned skipIsp[6] = { 23, 24, 25, 31, 32, 33};
+    const unsigned skipIsp[8] = { 23, 24, 25, 31, 32, 33, 131, 132};
     if(std::find(skipIsp, skipIsp+5, isp)==skipIsp+5) {
         LogValue(addy, ret.sPorog1, "Порог", Vars::rele1, enableLog);
         LogValue(addy, ret.sPorog2, "Порог", Vars::rele2, enableLog); }
+
+    ret.ok = true;
     return ret;
 }
 

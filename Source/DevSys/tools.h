@@ -17,6 +17,7 @@ namespace DAK
     {
         double value;
         AnsiString sConc;
+        double failureCode;
         bool ok;
     };
     ConcT GetModbusConc(unsigned addy, bool enableLog = true);
@@ -27,6 +28,8 @@ namespace DAK
         double current;
         bool rele[RelePin::count];
         AnsiString sIout, sConcI, sPorog1, sPorog2;
+        double failureCode;
+        bool ok;
     };
 
     DevState GetDevState(unsigned addy, bool enableLog = true);

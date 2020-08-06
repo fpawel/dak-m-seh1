@@ -52,8 +52,8 @@ namespace Format
     AnsiString Porog2(bool state);
     AnsiString Porog(bool porog1, bool porog2);
 
-    AnsiString Conc(double conc);
-    AnsiString Conc(double conc, unsigned gasIdx);
+    AnsiString Conc(double conc, double failureCode );
+    AnsiString Conc(double conc, unsigned gasIdx, double failureCode);
     AnsiString Iout(double conc);
     AnsiString Iout(double conc, unsigned gasIdx);
     bool TryGetValue1(const AnsiString &srcS, double &val);

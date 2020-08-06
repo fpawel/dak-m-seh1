@@ -65,6 +65,7 @@ public:
         return sets_;
     }
 
+
 private:
     const unsigned mainThreadId_;
 	TransferManagerT& tmngr_;
@@ -90,7 +91,7 @@ class RS485Adapter : public boost::noncopyable
 {
 
 public:
-    struct State { enum { START, END, NO_ANSWER }; };
+    struct State { enum { NO_ANSWER }; };
 
     explicit RS485Adapter(const MasterSlaveIOSettings &sets, MyPort *port );
     virtual ~RS485Adapter() {}
@@ -118,7 +119,6 @@ public:
     const MasterSlaveIOImpl& MasterSlave() const;
 
 private:
-
     boost::shared_ptr<MasterSlaveIOImpl> masterSlaveIO_;
     TOnNotifyState notifyState_;
     TransferManagerT& tmngr_;

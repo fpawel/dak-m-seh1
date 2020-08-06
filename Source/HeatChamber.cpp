@@ -152,10 +152,15 @@ void SetSetpoint(int t)
     std::string s = AnsiString::IntToHex( t,4).c_str();
     while(s.size()<4)
         s = "00" + s;
+
+    AnsiString str = s.c_str();
+
     while (s.size()>4)   {
         std::rotate(s.begin(), s.begin() + 1, s.end());
         s = s.substr(0, s.size()-1);
     }
+
+    str = s.c_str();
 
     AnsiString setT = Cmd::setT800;
     if (!IsTermoType800()){

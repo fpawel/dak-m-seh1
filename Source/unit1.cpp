@@ -173,7 +173,7 @@ __fastcall TForm1::TForm1(TComponent* Owner)
     xmlTables_( TiXML::ChildElement( GetAppXML().form1, "таблицы" ) ),
     xmlReportFile_( TiXML::ChildElement( GetAppXML().config, "Протокол_настройки" ) )
 {
-	Caption = "Настройка ДАК. Версия 1.4.9";
+	Caption = "Настройка ДАК. Версия 1.4.10";
     //::CoInitialize(NULL);
     // настройка панелей статуса
     pnStatus_[0] = Panel9;

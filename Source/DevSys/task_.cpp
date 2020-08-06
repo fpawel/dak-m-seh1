@@ -38,6 +38,8 @@
 #include "HeatChamber.h"
 #include "Devices.h"
 #include "..\my_include\win\MyModFN.hpp"
+#include "..\my_include\MyPort.hpp"
+#include "modbusadapter.h"
 //---------------------------------------------------------------------------
 #include "boost\assign\list_of.hpp"
 
@@ -693,7 +695,33 @@ void AdjustConcTask::DoLoadXML(TiXmlElement* elem)
 void SelectGasTask::PerformActionForAddy(unsigned addy, bool& isComplete, bool& isFailed)
 {
     const DAK::Sets sets = DAK::Sets::Get();
-    const double arg = sets.gas=="CH4" ? 1 : ( sets.gas=="CO2" ? 0 : 15);
+
+    int deviceTypeCode = StrToIntDef(sets.ispolnenie,0);
+    
+    double arg;
+
+    if (deviceTypeCode < 126) {
+        if (sets.gas=="CO2") {
+            arg = 0;
+        } else if (sets.gas=="CH4") {
+            arg = 1;
+        } else if (sets.gas=="C3H8") {
+            arg = 15;
+        } else if (sets.gas=="C6H14") {
+            arg = 1;
+        }
+    } else {
+         if (sets.gas=="CO2") {
+            arg = 1;
+        } else if (sets.gas=="CH4") {
+            arg = 2;
+        } else if (sets.gas=="C3H8") {
+            arg = 13;
+        } else if (sets.gas=="C6H14") {
+            arg = 2;
+        }
+    }
+    
     WriteModbusFloat( Modbus(), addy, DAK::Cmd::Code::select_gas, arg);
     WriteModbusFloat( Modbus(), addy, DAK::Cmd::Code::reset, 0);
 }
@@ -755,6 +783,15 @@ bool ReadMessageFromPipe(HANDLE hPipe, byte& addr, int& level, AnsiString &text 
 
 void TestHartTask::PerformAction()
 {
+    try
+    {
+        Modbus().port_->Disconnect();
+    }
+    catch(...)
+    {
+        Form1->AddLog( "EXCEPTION: Modbus().port_->Disconnect()" );
+    }
+
     //DAK::GetDevState(addy, false);
     CtrlSysImpl::IOSets sets = CtrlSys().Instance().GetIOSets();
     STARTUPINFO si = {0};
@@ -843,6 +880,15 @@ void TestHartTask::PerformAction()
     ::WaitForSingleObject( pi.hProcess, INFINITE );
 
     Devs::SaveFile( ( MyGetExePath()+"devices.xml" ).c_str() );
+
+    try
+    {
+        Modbus().port_->Connect();
+    }
+    catch(...)
+    {
+        Form1->AddLog( "EXCEPTION: Modbus().port_->Connect()" );
+    }
 
 
     MyMessageBox(Form1->Handle, msgResult.c_str(), "Проверка HART протокола",

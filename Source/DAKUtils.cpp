@@ -164,7 +164,7 @@ AnsiString Porog(bool porog1, bool porog2)
     return gasIdx<count ? Porog(porog1, porog2, gasIdx ) : P(porog1, porog2);
 }
 //------------------------------------------------------------------------------
-AnsiString Conc(double conc, unsigned gasIdx)
+AnsiString Conc(double conc, unsigned gasIdx, double failureCode)
 {
     assert(gasIdx<Pneumo::Count());
     const Sets sets = Sets::Get();
@@ -173,11 +173,18 @@ AnsiString Conc(double conc, unsigned gasIdx)
         maxD = sets.maxPogr[gasIdx],
         d = conc-pgs, d_abs = std::fabs(d),
         delta = maxD==0 ? 1 : d_abs/maxD;
-    const bool good = std::fabs(d)<maxD;
+    bool okD = std::fabs(d) < maxD;
+    const bool good = (failureCode == 0 || failureCode == -1) && okD;
+
+    AnsiString sFailure = "";
+    if (failureCode != 0 && failureCode != -1) {
+        sFailure = " код отказа "+ FloatToStr(failureCode);
+    }
+
     return
         FFloat( conc, 3)+" "+
-        Res(d>=0)+FFloat(d_abs,3)+(good ? "<" : ">" )+FFloat(maxD,3)+" "+
-        FFloat(delta,1)+"d "+Res1(good);
+        Res(d>=0)+FFloat(d_abs,3)+(okD ? " < " : " > " ) + FFloat(maxD,3)+" "+
+        FFloat(delta,1)+"d "+Res1(good) + sFailure;
 }
 //------------------------------------------------------------------------------
 AnsiString Iout(double i, unsigned gasIdx)
@@ -206,10 +213,10 @@ AnsiString Iout(double i)
 }
 
 //------------------------------------------------------------------------------
-AnsiString Conc(double conc)
+AnsiString Conc(double conc, double failureCode )
 {
     const unsigned gasIdx = Pneumo::Current(), count = Pneumo::Count();
-    return gasIdx<count ? Conc(conc, gasIdx) : FFloat( conc, 3);
+    return gasIdx<count ? Conc(conc, gasIdx, failureCode ) : FFloat( conc, 3);
 }
 //------------------------------------------------------------------------------
 AnsiString Variac1(double conc1, double conc2)

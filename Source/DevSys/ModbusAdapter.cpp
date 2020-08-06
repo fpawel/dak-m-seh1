@@ -46,7 +46,7 @@ bool IsModbusStr(const uInt8 *b, const uInt8 *e, uInt8 devAddr, uInt8 commandCod
 
 //---------------------------------------------------------------------------
 ModbusAdapter::ModbusAdapter(const MasterSlaveIOSettings &sets, MyPort *port ) :
-    RS485Adapter( sets, port )
+    RS485Adapter( sets, port ) , port_(port)
 {
 }
 //------------------------------------------------------------------------------

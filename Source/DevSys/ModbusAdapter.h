@@ -16,6 +16,7 @@
 #include "MyExcpt.hpp"
 #include "MasterSlaveIO.h"
 
+
 class MasterSlaveIOImpl;
 class TransferManagerT;
 
@@ -31,6 +32,8 @@ class ModbusAdapter : public RS485Adapter
 public:
     explicit ModbusAdapter(const MasterSlaveIOSettings &sets, MyPort *port);
     virtual ~ModbusAdapter() {}
+
+    MyPort *port_;
 
     virtual const unsigned char* SentData() const;
     virtual unsigned SentDataSize() const;

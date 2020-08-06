@@ -295,9 +295,6 @@ LRESULT CtrlSysImpl::Impl::OnModbus(const RS485Adapter* adpt, unsigned state)
         Devs::SetNotAnswered( addy );
         return 0;
     }
-    if( state==RS485Adapter::State::END )
-        Devs::SetAnswered( addy );
-
     return 0;
 }
 //------------------------------------------------------------------------------

@@ -134,7 +134,8 @@ void ReadModbusRegistersData(  ModbusAdapter& protocol, unsigned slave, unsigned
     protocol.PerformTransfer( slave, MODUS_READ_REGISTER_COMMAND_CODE, txd, txd+4);
     const unsigned acceptedDataSize = protocol.AcceptedDataSize();
     if( acceptedDataSize!=waitStrLen + 1 ) {
-        printError( AnsiString().sprintf("%d: Команда 3: несоответсвие формата ответа\n",slave) );
+        printError( AnsiString().sprintf("%d: Команда 3, регистр %d, %d регистров: несоответсвие формата ответа, ожидалось %d байт, получено %d\n",
+            slave, regAddr, regCount, waitStrLen + 1, acceptedDataSize) );
     }
 }
 //------------------------------------------------------------------------------
@@ -150,9 +151,15 @@ ModbusValue1T ReadModbusValue1(  ModbusAdapter& protocol, unsigned addy, unsigne
 {
     assert (onReadModbusFloatValue != NULL);
     ModbusValue1T ret;
+    ret.ok = false;
     try
     {
         ReadModbusRegistersData( protocol, addy, regAddr, 2);
+        if (protocol.AcceptedDataSize() < 5){
+            printlnError(AnsiString().sprintf("ожидалось 5 байт, получено %d",  protocol.AcceptedDataSize()));
+            return ret;
+        }
+
         const unsigned char *rxd = protocol.AcceptedData()+1;
         unsigned char dt[4];
         std::copy(rxd, rxd+4, dt );
@@ -161,8 +168,7 @@ ModbusValue1T ReadModbusValue1(  ModbusAdapter& protocol, unsigned addy, unsigne
         dt[0] &= 0x87;
         ret.conc = BCDToFloat( dt );
         ret.ok = true;
-        onReadModbusFloatValue(addy, regAddr, ret.conc);
-    }
+        onReadModbusFloatValue(addy, regAddr, ret.conc);    }
     catch(...)
     {
         printlnException(__FILE_LINE__);

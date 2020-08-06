@@ -300,7 +300,6 @@ void RS485Adapter::PerformTransfer( unsigned addy, unsigned commandCode,
 {
     int repeatCount = masterSlaveIO_->Sets().repeatCount_;
     lx:
-    SetSignalState(State::START);
 
     std::vector<unsigned char> txd;
 
@@ -317,12 +316,18 @@ void RS485Adapter::PerformTransfer( unsigned addy, unsigned commandCode,
     const unsigned char *rxd = masterSlaveIO_->RxD(), *rxdEnd = rxd + rxdSize;
 
     // проверка корректности rxd_ - возбуждаются исключения
-    if ( TestAnswer(rxd, rxdEnd) &&  (repeatCount>0) ) {
-       --repeatCount;
-       goto lx;
+    bool fail = TestAnswer(rxd, rxdEnd);
+    if (fail) {
+        if (repeatCount>0)  {
+            --repeatCount;
+            goto lx;
+        }
+        SetAddy( this->Addy(), false );
+        SetSignalState(State::NO_ANSWER);
+        return;
     }
     SetAddy( this->Addy(), true );
-    SetSignalState(State::END);
+    return;
 }
 //------------------------------------------------------------------------------
 
